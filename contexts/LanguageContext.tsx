@@ -1,5 +1,7 @@
-import React, { createContext, useContext, useState, ReactNode } from 'react';
-import { translations, Language, TranslationKey } from '../lib/translations';
+import React, { createContext, useState, useContext, useMemo, useCallback } from 'react';
+import { translations, TranslationKey } from '../lib/translations';
+
+type Language = 'es' | 'ca';
 
 interface LanguageContextType {
   language: Language;
@@ -9,16 +11,21 @@ interface LanguageContextType {
 
 const LanguageContext = createContext<LanguageContextType | undefined>(undefined);
 
-export const LanguageProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
+export const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [language, setLanguage] = useState<Language>('es');
 
-  const t = (key: TranslationKey | string): string => {
-    const translationKey = key as TranslationKey;
-    return translations[language][translationKey] || key;
-  };
+  const t = useCallback((key: TranslationKey | string): string => {
+    return translations[language][key as TranslationKey] || (key as string);
+  }, [language]);
+
+  const value = useMemo(() => ({
+    language,
+    setLanguage,
+    t,
+  }), [language, t]);
 
   return (
-    <LanguageContext.Provider value={{ language, setLanguage, t }}>
+    <LanguageContext.Provider value={value}>
       {children}
     </LanguageContext.Provider>
   );

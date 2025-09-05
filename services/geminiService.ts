@@ -111,15 +111,14 @@ export const extractBandsFromUrl = async (url: string): Promise<string[]> => {
 
     const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
 
-    // FIX: Updated prompt to ask for a comma-separated list instead of JSON, to comply with googleSearch guidelines.
     const prompt = `
         You are a web scraping assistant specialized in music platforms. Your task is to analyze the content of the provided URL, which points to a public music playlist or library (like Apple Music, Spotify, etc.).
         
         1.  Access the content of this URL: ${url}
         2.  Identify and extract all the unique artist names mentioned on that page.
         3.  Ignore track titles, album names, playlist descriptions, and any other text.
-        4.  Return the result as a comma-separated list of strings. For example: Artist A, Artist B, Artist C.
-        5.  Crucially, your entire response must be ONLY the comma-separated list. Do not include any introductory text, explanations, or labels.
+        4.  Return the result as a JSON array of strings. For example: ["Artist A", "Artist B", "Artist C"].
+        5.  Crucially, your entire response must be ONLY the raw JSON array. Do not include any introductory text, explanations, or markdown formatting like \`\`\`json.
     `;
 
     try {
@@ -137,8 +136,8 @@ export const extractBandsFromUrl = async (url: string): Promise<string[]> => {
             return [];
         }
 
-        // FIX: Parse the comma-separated string instead of trying to parse JSON.
-        return text.split(',').map(band => band.trim()).filter(Boolean);
+        // Attempt to parse the response as JSON, even with the googleSearch constraint
+        return JSON.parse(text);
 
     } catch (error) {
         console.error("Error extracting band data from URL via Gemini API:", error);
