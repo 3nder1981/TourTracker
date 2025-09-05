@@ -1,0 +1,5 @@
+{
+  "name": "Conciertos para Zeus",
+  "description": "Una aplicación para seguir los próximos conciertos de las bandas de tu biblioteca musical. Utiliza IA para generar datos de conciertos y ofrece opciones para marcar bandas como favoritas y filtrar eventos por fecha y país.",
+  "requestFramePermissions": []
+}
