@@ -7,16 +7,57 @@ import LibraryManager from './components/LibraryManager';
 import ConcertFilters from './components/ConcertFilters';
 import ConcertList from './components/ConcertList';
 import ImportModal from './components/ImportModal';
+import { useLanguage } from './contexts/LanguageContext';
+
+type FilterStatus = 'all' | 'favorites' | 'purchased';
 
 const App: React.FC = () => {
   const [bands, setBands] = useLocalStorage<Band[]>('tourtracker-bands', []);
-  const [allConcerts, setAllConcerts] = useState<Concert[]>([]);
+  const [allConcerts, setAllConcerts] = useLocalStorage<Concert[]>('tourtracker-concerts', []);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const { t } = useLanguage();
 
-  const [showFavorites, setShowFavorites] = useState(false);
+  const [filterStatus, setFilterStatus] = useState<FilterStatus>('all');
   const [selectedCountry, setSelectedCountry] = useState('');
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
+
+  // Request notification permission on mount
+  useEffect(() => {
+    if ('Notification' in window && Notification.permission === 'default') {
+      Notification.requestPermission();
+    }
+  }, []);
+
+  // Effect to schedule notifications
+  useEffect(() => {
+    const timeoutIds: NodeJS.Timeout[] = [];
+    if (Notification.permission === 'granted') {
+      allConcerts.forEach(concert => {
+        if (concert.reminderDays !== null) {
+          const concertDate = new Date(concert.date).getTime();
+          const reminderTime = concertDate - concert.reminderDays * 24 * 60 * 60 * 1000;
+          const now = Date.now();
+          
+          if (reminderTime > now) {
+            const timeoutId = setTimeout(() => {
+              new Notification(t('reminderNotificationTitle'), {
+                body: t('reminderNotificationBody', { 
+                  bandName: concert.bandName, 
+                  days: concert.reminderDays 
+                }),
+              });
+            }, reminderTime - now);
+            timeoutIds.push(timeoutId);
+          }
+        }
+      });
+    }
+    // Cleanup timeouts on unmount or when concerts change
+    return () => {
+      timeoutIds.forEach(clearTimeout);
+    };
+  }, [allConcerts, t]);
 
   const getConcerts = useCallback(async () => {
     if (bands.length === 0) {
@@ -30,7 +71,7 @@ const App: React.FC = () => {
       const fetchedConcerts = await fetchConcertsForBands(bandNames);
       const concertsWithFavorites = fetchedConcerts.map(concert => ({
         ...concert,
-        isFavorite: bands.find(b => b.name === concert.bandName)?.isFavorite || false,
+        isFavorite: bands.find(b => b.name.toLowerCase() === concert.bandName.toLowerCase())?.isFavorite || false,
       }));
       setAllConcerts(concertsWithFavorites);
     } catch (err: any) {
@@ -38,7 +79,7 @@ const App: React.FC = () => {
     } finally {
       setIsLoading(false);
     }
-  }, [bands]);
+  }, [bands, setAllConcerts]);
 
   useEffect(() => {
     getConcerts();
@@ -64,9 +105,19 @@ const App: React.FC = () => {
   };
 
   const handleToggleFavorite = (name: string) => {
-    setBands(bands.map(b => b.name === name ? { ...b, isFavorite: !b.isFavorite } : b));
+    const lowerCaseName = name.toLowerCase();
+    setBands(bands.map(b => b.name.toLowerCase() === lowerCaseName ? { ...b, isFavorite: !b.isFavorite } : b));
+    setAllConcerts(allConcerts.map(c => c.bandName.toLowerCase() === lowerCaseName ? { ...c, isFavorite: !c.isFavorite } : c));
   };
   
+  const handleSetReminder = (concertId: string, days: number | null) => {
+    setAllConcerts(allConcerts.map(c => c.id === concertId ? { ...c, reminderDays: days } : c));
+  };
+  
+  const handleToggleTicketPurchased = (concertId: string) => {
+    setAllConcerts(allConcerts.map(c => c.id === concertId ? { ...c, ticketPurchased: !c.ticketPurchased } : c));
+  };
+
   const availableCountries = useMemo(() => {
     const countries = new Set(allConcerts.map(c => c.country));
     return Array.from(countries).sort();
@@ -74,10 +125,14 @@ const App: React.FC = () => {
 
   const filteredConcerts = useMemo(() => {
     return allConcerts
-      .filter(concert => !showFavorites || concert.isFavorite)
+      .filter(concert => {
+        if (filterStatus === 'favorites') return concert.isFavorite;
+        if (filterStatus === 'purchased') return concert.ticketPurchased;
+        return true;
+      })
       .filter(concert => !selectedCountry || concert.country === selectedCountry)
       .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
-  }, [allConcerts, showFavorites, selectedCountry]);
+  }, [allConcerts, filterStatus, selectedCountry]);
 
   return (
     <div className="bg-slate-900 text-slate-100 min-h-screen font-sans">
@@ -93,9 +148,8 @@ const App: React.FC = () => {
               onOpenImportModal={() => setIsImportModalOpen(true)}
             />
             <ConcertFilters
-              bands={bands}
-              showFavorites={showFavorites}
-              setShowFavorites={setShowFavorites}
+              filterStatus={filterStatus}
+              setFilterStatus={setFilterStatus}
               selectedCountry={selectedCountry}
               setSelectedCountry={setSelectedCountry}
               availableCountries={availableCountries}
@@ -106,6 +160,8 @@ const App: React.FC = () => {
               concerts={filteredConcerts}
               isLoading={isLoading}
               error={error}
+              onSetReminder={handleSetReminder}
+              onToggleTicketPurchased={handleToggleTicketPurchased}
             />
           </div>
         </div>

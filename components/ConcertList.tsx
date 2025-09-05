@@ -8,9 +8,11 @@ interface ConcertListProps {
   concerts: Concert[];
   isLoading: boolean;
   error: string | null;
+  onSetReminder: (concertId: string, days: number | null) => void;
+  onToggleTicketPurchased: (concertId: string) => void;
 }
 
-const ConcertList: React.FC<ConcertListProps> = ({ concerts, isLoading, error }) => {
+const ConcertList: React.FC<ConcertListProps> = ({ concerts, isLoading, error, onSetReminder, onToggleTicketPurchased }) => {
   const { t } = useLanguage();
 
   if (isLoading) {
@@ -48,8 +50,13 @@ const ConcertList: React.FC<ConcertListProps> = ({ concerts, isLoading, error })
 
   return (
     <div className="space-y-4">
-      {concerts.map((concert, index) => (
-        <ConcertCard key={`${concert.bandName}-${concert.date}-${index}`} concert={concert} />
+      {concerts.map((concert) => (
+        <ConcertCard 
+          key={concert.id} 
+          concert={concert}
+          onSetReminder={onSetReminder}
+          onToggleTicketPurchased={onToggleTicketPurchased}
+        />
       ))}
     </div>
   );

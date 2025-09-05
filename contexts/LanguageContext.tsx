@@ -4,7 +4,7 @@ import { translations, Language, TranslationKey } from '../lib/translations';
 interface LanguageContextType {
   language: Language;
   setLanguage: (language: Language) => void;
-  t: (key: TranslationKey | string) => string;
+  t: (key: TranslationKey | string, placeholders?: Record<string, string | number>) => string;
 }
 
 const LanguageContext = createContext<LanguageContextType | undefined>(undefined);
@@ -12,9 +12,15 @@ const LanguageContext = createContext<LanguageContextType | undefined>(undefined
 export const LanguageProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [language, setLanguage] = useState<Language>('es');
 
-  const t = (key: TranslationKey | string): string => {
+  const t = (key: TranslationKey | string, placeholders: Record<string, string | number> = {}): string => {
     const translationKey = key as TranslationKey;
-    return translations[language][translationKey] || key;
+    let translation = translations[language][translationKey] || key;
+
+    Object.entries(placeholders).forEach(([placeholder, value]) => {
+        translation = translation.replace(`{${placeholder}}`, String(value));
+    });
+
+    return translation;
   };
 
   return (

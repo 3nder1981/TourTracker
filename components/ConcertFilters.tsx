@@ -1,24 +1,30 @@
 import React from 'react';
 import { useLanguage } from '../contexts/LanguageContext';
-import type { Band } from '../types';
+
+type FilterStatus = 'all' | 'favorites' | 'purchased';
 
 interface ConcertFiltersProps {
-  bands: Band[];
-  showFavorites: boolean;
-  setShowFavorites: (show: boolean) => void;
+  filterStatus: FilterStatus;
+  setFilterStatus: (status: FilterStatus) => void;
   selectedCountry: string;
   setSelectedCountry: (country: string) => void;
   availableCountries: string[];
 }
 
 const ConcertFilters: React.FC<ConcertFiltersProps> = ({
-  showFavorites,
-  setShowFavorites,
+  filterStatus,
+  setFilterStatus,
   selectedCountry,
   setSelectedCountry,
   availableCountries,
 }) => {
   const { t } = useLanguage();
+
+  const getButtonClass = (status: FilterStatus) => {
+    return filterStatus === status
+      ? 'bg-sky-600 text-white border border-sky-600'
+      : 'bg-slate-700 text-slate-300 border border-slate-600 hover:bg-slate-600';
+  };
 
   return (
     <div className="bg-slate-800/50 p-4 rounded-lg shadow-md border border-slate-700 flex flex-col sm:flex-row gap-4 items-center">
@@ -27,25 +33,24 @@ const ConcertFilters: React.FC<ConcertFiltersProps> = ({
         <div className="inline-flex rounded-md shadow-sm" role="group">
           <button
             type="button"
-            onClick={() => setShowFavorites(false)}
-            className={`px-4 py-2 text-sm font-medium rounded-l-lg transition-colors ${
-              !showFavorites
-                ? 'bg-sky-600 text-white border border-sky-600'
-                : 'bg-slate-700 text-slate-300 border border-slate-600 hover:bg-slate-600'
-            }`}
+            onClick={() => setFilterStatus('all')}
+            className={`px-4 py-2 text-sm font-medium rounded-l-lg transition-colors ${getButtonClass('all')}`}
           >
             {t('allBands')}
           </button>
           <button
             type="button"
-            onClick={() => setShowFavorites(true)}
-            className={`px-4 py-2 text-sm font-medium rounded-r-lg transition-colors ${
-              showFavorites
-                ? 'bg-sky-600 text-white border border-sky-600'
-                : 'bg-slate-700 text-slate-300 border border-slate-600 hover:bg-slate-600'
-            }`}
+            onClick={() => setFilterStatus('favorites')}
+            className={`px-4 py-2 text-sm font-medium transition-colors ${getButtonClass('favorites')}`}
           >
             {t('favoritesOnly')}
+          </button>
+          <button
+            type="button"
+            onClick={() => setFilterStatus('purchased')}
+            className={`px-4 py-2 text-sm font-medium rounded-r-lg transition-colors ${getButtonClass('purchased')}`}
+          >
+            {t('purchased')}
           </button>
         </div>
       </div>

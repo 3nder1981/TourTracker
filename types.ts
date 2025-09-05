@@ -5,6 +5,7 @@ export interface Band {
 }
 
 export interface Concert {
+  id: string;
   bandName: string;
   date: string;
   city: string;
@@ -12,4 +13,6 @@ export interface Concert {
   venue: string;
   ticketUrl: string;
   isFavorite: boolean;
+  reminderDays: number | null;
+  ticketPurchased: boolean;
 }

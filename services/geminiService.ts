@@ -14,7 +14,7 @@ const concertSchema = {
   required: ["bandName", "date", "city", "country", "venue", "ticketUrl"],
 };
 
-export const fetchConcertsForBands = async (bandNames: string[]): Promise<Omit<Concert, 'isFavorite'>[]> => {
+export const fetchConcertsForBands = async (bandNames: string[]): Promise<Concert[]> => {
   if (!process.env.API_KEY) {
     throw new Error("API_KEY environment variable not set");
   }
@@ -48,8 +48,15 @@ export const fetchConcertsForBands = async (bandNames: string[]): Promise<Omit<C
       console.warn("Gemini API returned an empty response.");
       return [];
     }
-    const concerts = JSON.parse(jsonText);
-    return concerts;
+    const fetchedConcerts: Omit<Concert, 'id' | 'isFavorite' | 'reminderDays' | 'ticketPurchased'>[] = JSON.parse(jsonText);
+
+    return fetchedConcerts.map(concert => ({
+        ...concert,
+        id: crypto.randomUUID(),
+        isFavorite: false, // This will be updated in the App component
+        reminderDays: null,
+        ticketPurchased: false,
+    }));
 
   } catch (error) {
     console.error("Error fetching or parsing concert data from Gemini API:", error);
@@ -111,7 +118,6 @@ export const extractBandsFromUrl = async (url: string): Promise<string[]> => {
 
     const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
 
-    // FIX: Updated prompt to ask for a comma-separated list instead of JSON, to comply with googleSearch guidelines.
     const prompt = `
         You are a web scraping assistant specialized in music platforms. Your task is to analyze the content of the provided URL, which points to a public music playlist or library (like Apple Music, Spotify, etc.).
         
@@ -136,8 +142,7 @@ export const extractBandsFromUrl = async (url: string): Promise<string[]> => {
             console.warn("Gemini API returned an empty response for URL extraction.");
             return [];
         }
-
-        // FIX: Parse the comma-separated string instead of trying to parse JSON.
+        
         return text.split(',').map(band => band.trim()).filter(Boolean);
 
     } catch (error) {
